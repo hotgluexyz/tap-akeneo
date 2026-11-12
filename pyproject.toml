@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "tap-akeneo"
+version = "0.0.1"
+description = "`tap-akeneo` is a Singer tap for akeneo, built with the Meltano SDK for Singer Taps."
+authors = ["Hotglue"]
+keywords = [
+    "ELT",
+    "akeneo",
+]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+requests = "^2.25.1"
+hotglue-singer-sdk = "1.0.51"
+typing-extensions = ">=4.12"
+
+[build-system]
+requires = ["poetry-core>=1.0.8"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+tap-akeneo = "tap_akeneo.tap:TapAkeneo.cli"
+
+[tool.tox]
+requires = [
+    "tox>=4.43",
+    "tox-uv",
+]
+env_list = [
+    "lint",
+    "typing",
+    "3.10",
+]
+
+[tool.tox.env_run_base]
+description = "run tests on Python {env_name}"
+runner = "uv-venv-runner"
+pass_env = [
+    "TAP_AKENEO_*",
+]
+deps = ["pytest>=9", "responses>=0.25"]
+commands = [ [ "pytest", { replace = "posargs", default = [ "tests" ], extend = true } ] ]
+
+[tool.tox.env.lint]
+description = "run ruff linter and formatter check"
+skip_install = true
+deps = ["ruff>=0.15"]
+commands = [
+    ["ruff", "check", "."],
+    ["ruff", "format", "--check", "."],
+]
+
+[tool.tox.env.typing]
+description = "type checks"
+runner = "uv-venv-runner"
+deps = [
+    "mypy>=1.19.1",
+    "ty>=0.0.18",
+    "types-requests",
+    "types-jsonschema",
+    "pytest>=9",
+    "responses>=0.25",
+]
+commands = [
+    [ "mypy", { replace = "posargs", default = [ "tap_akeneo", "tests" ], extend = true } ],
+    [ "ty", "check", { replace = "posargs", default = [ "tap_akeneo", "tests" ], extend = true } ],
+]
