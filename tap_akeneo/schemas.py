@@ -9,32 +9,32 @@ from __future__ import annotations
 
 from typing import Any
 
+from hotglue_singer_sdk import typing as th
+
 
 def schema(
     *, strings=(), objects=(), arrays=(), booleans=(), integers=(), extra=None
 ) -> dict[str, Any]:
     """Build reusable nullable catalog field types without guessing attribute codes."""
-    properties: dict[str, Any] = {
-        "_links": {"type": ["object", "null"], "additionalProperties": True}
-    }
+    properties = th.PropertiesList()
+    open_object = th.ObjectType(additional_properties=th.CustomType({}))
+    properties.append(th.Property("_links", open_object))
     for fields, kind in [
-        (strings, "string"),
-        (objects, "object"),
-        (arrays, "array"),
-        (booleans, "boolean"),
-        (integers, "integer"),
+        (strings, th.StringType),
+        (objects, open_object),
+        (arrays, th.ArrayType(th.CustomType({}))),
+        (booleans, th.BooleanType),
+        (integers, th.IntegerType),
     ]:
         for name in fields:
-            properties[name] = {"type": [kind, "null"]}
-            if kind == "object":
-                properties[name]["additionalProperties"] = True
-            if kind == "array":
-                properties[name]["items"] = {}
-    properties.update(extra or {})
-    for name in ("created", "updated"):
-        if name in properties:
-            properties[name]["format"] = "date-time"
-    return {"type": "object", "properties": properties}
+            field_type = th.DateTimeType if name in ("created", "updated") else kind
+            properties.append(th.Property(name, field_type))
+    result = properties.to_dict()
+    # SDK 1.0.51 cannot wrap an unconstrained {} in an optional Property.
+    # Keep arbitrary values unrestricted; declaring every JSON type would make
+    # SDK record conformance coerce them to booleans.
+    result["properties"].update(extra or {})
+    return result
 
 
 PRODUCT = schema(
@@ -101,8 +101,8 @@ ATTRIBUTE = schema(
         "reference_data_name",
         "decimal_places_strategy",
     ),
-    objects=("labels", "group_labels", "color_configuration", "attribute_metadata"),
-    integers=("sort_order", "max_characters"),
+    objects=("labels", "group_labels", "color_configuration", "attribute_metadata", "guidelines"),
+    integers=("sort_order", "max_characters", "minimum_input_length"),
     booleans=(
         "localizable",
         "scopable",
@@ -120,6 +120,7 @@ ATTRIBUTE = schema(
     arrays=("available_locales", "allowed_extensions", "table_configuration"),
     extra={
         "default_value": {},
+        "auto_option_sorting": {},
         "decimal_places": {"type": ["number", "null"]},
         "max_items_count": {"type": ["number", "null"]},
     },

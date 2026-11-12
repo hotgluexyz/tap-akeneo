@@ -86,6 +86,31 @@ def test_products_singer_retains_values_and_verbatim_cursor(capsys):
 
 
 @responses.activate
+def test_attribute_metadata_survives_singer_output(capsys):
+    rows = [
+        {
+            "code": "description",
+            "type": "pim_catalog_textarea",
+            "guidelines": {"en_US": "Describe the material", "de_DE": "Material beschreiben"},
+            "minimum_input_length": 3,
+            "auto_option_sorting": False,
+            "default_value": {"custom": [False, 0, None]},
+        },
+        {
+            "code": "identifier",
+            "type": "pim_catalog_identifier",
+            "guidelines": {},
+            "minimum_input_length": None,
+            "auto_option_sorting": None,
+            "default_value": None,
+        },
+    ]
+    responses.get(API + "/attributes", json=page(rows))
+    TapAkeneo(config=CONFIG).streams["attributes"].sync()
+    assert [m["record"] for m in messages(capsys) if m["type"] == "RECORD"] == rows
+
+
+@responses.activate
 def test_child_only_selection_traverses_parents_and_qualifies_repeated_codes(capsys):
     tap = TapAkeneo(config=CONFIG)
     catalog = tap.catalog.to_dict()
